@@ -1003,7 +1003,7 @@ class Fort15:
     @property
     def RUNDES(self) -> str:
         try:
-            self.__RUNDES
+            return self.__RUNDES
         except AttributeError:
             return datetime.now().strftime('created on %Y-%m-%d %H:%M')
 
@@ -1014,7 +1014,7 @@ class Fort15:
     @property
     def RUNID(self) -> str:
         try:
-            self.__RUNID
+            return self.__RUNID
         except AttributeError:
             return self.mesh.description
 
