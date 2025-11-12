@@ -19,6 +19,7 @@ import typepigeon
 
 from adcircpy.mesh.mesh import AdcircMesh
 
+from adcircpy.warnings import warn_adcirc, ModelSetupWarning
 
 class StationType(Enum):
     ELEVATION = 'NSTAE'
@@ -153,6 +154,9 @@ class Fort15:
     def __init__(self, mesh: AdcircMesh = None):
         self._mesh = mesh
         self._runtype = None
+
+        # initialize user-defined nameilsts
+        self._custom_namelists: dict[str, dict[str,str]] = {}
 
     @property
     def mesh(self) -> AdcircMesh:
@@ -637,7 +641,44 @@ class Fort15:
             'outputWindDrag': 'F',
             'invertedBarometerOnElevationBoundary': 'T',
         }
+
+        # Handle user-defined namelist values/additions
+        for name, overrides in self._custom_namelists.items():
+            namelists.setdefault(name, {}).update(overrides)
+
         return namelists
+
+    def add_namelist(
+            self, 
+            name: str, 
+            entries: dict[str,str] | None=None
+        ) -> None:
+        '''
+        Adds or updates a namelist to the fort.15 structure
+        '''
+        if name not in self._custom_namelists:
+            self._custom_namelists[name] = {}
+        if entries:
+            self._custom_namelists[name].update(entries)
+
+    def set_namelist_values(
+            self, 
+            block: str, 
+            key: str, 
+            value: str | float | int
+        ) -> None:
+        '''
+        Sets or updates a single value within a custom namelist
+        '''
+        if block not in self._custom_namelists:
+            self._custom_namelists[block] = {}
+        self._custom_namelists[block][key] = value
+
+    def clear_namelists(self) -> None:
+        '''
+        Deletes all custom namelist entries
+        '''
+        self._custom_namelists.clear()
 
     def set_time_weighting_factors_in_gwce(self, A00: float, B00: float, C00: float):
         A00 = float(A00)
@@ -1409,7 +1450,12 @@ class Fort15:
                 try:
                     self.fort24
                 except AttributeError:
-                    raise Exception('Must generate fort.24 file.')
+                    warn_adcirc(
+                "NTIP is presently set to 2 but no self attraction"
+                " and loading data is present and thus no fort.24 will be"
+                " generated.",
+                ModelSetupWarning
+                )
             return NTIP
         except AttributeError:
             return 1
